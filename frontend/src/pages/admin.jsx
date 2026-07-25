@@ -246,7 +246,7 @@ function AdminPendingPage() {
 // ---------- Courses management ----------
 function AdminCoursesPage() {
   const [courses, setCourses] = React.useState(null);
-  const [newCourse, setNewCourse] = React.useState({ title: "", grade: "الصف الأول الإعدادي", term: "الترم الأول" });
+  const [newCourse, setNewCourse] = React.useState({ title: "", grade: "الصف الأول الإعدادي", term: "الترم الأول", is_free: false });
   const [openCreate, setOpenCreate] = React.useState(false);
   const [expandedCourse, setExpandedCourse] = React.useState(null);
   const [expandedUnit, setExpandedUnit] = React.useState(null);
@@ -294,7 +294,10 @@ function AdminCoursesPage() {
                 <button className="flex items-center gap-3 flex-1 text-right" onClick={() => setExpandedCourse(expandedCourse === c.id ? null : c.id)}>
                   <div className={`w-10 h-10 rounded-xl bg-azhar-800 text-gold-300 flex items-center justify-center transition ${expandedCourse === c.id ? "rotate-90" : ""}`}><Icon.ArrowLeft className="w-4 h-4" /></div>
                   <div>
-                    <div className="font-display font-bold text-azhar-800">{c.title}</div>
+                    <div className="font-display font-bold text-azhar-800 flex items-center gap-2">
+                      {c.title}
+                      {c.is_free ? <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">مجاني</span> : null}
+                    </div>
                     <div className="text-xs text-ink/60">{c.grade} · {c.term} · {c.units?.length || 0} وحدة</div>
                   </div>
                 </button>
@@ -358,6 +361,10 @@ function AdminCoursesPage() {
               options={["الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي", "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"]} />
             <Select label="الترم" value={newCourse.term} onChange={e => setNewCourse({ ...newCourse, term: e.target.value })}
               options={["الترم الأول", "الترم الثاني", "العام كامل"]} />
+            <label className="flex items-center gap-2 text-sm font-bold text-azhar-800">
+              <input type="checkbox" checked={newCourse.is_free} onChange={e => setNewCourse({ ...newCourse, is_free: e.target.checked })} />
+              كورس مجاني (يفتح لأي طالب حتى بدون اشتراك)
+            </label>
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpenCreate(false)}>إلغاء</Button>
