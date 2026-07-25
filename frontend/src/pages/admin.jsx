@@ -1,6 +1,6 @@
 // ============================================================
 // Admin Dashboard: overview, courses, quiz builder, live schedule,
-// pending payments review, all students, financial, settings
+// pending payments review, all students, financial, settings, lectures
 // ============================================================
 
 function AdminLayout({ children, page }) {
@@ -9,6 +9,7 @@ function AdminLayout({ children, page }) {
     { href: "#/admin", key: "dashboard", label: "لوحة القيادة", icon: Icon.Home },
     { href: "#/admin/pending", key: "pending", label: "الإيصالات المعلقة", icon: Icon.CreditCard },
     { href: "#/admin/courses", key: "courses", label: "إدارة الكورسات", icon: Icon.Book },
+    { href: "#/admin/lectures", key: "lectures", label: "المحاضرات", icon: Icon.Video },
     { href: "#/admin/quiz", key: "quiz", label: "إنشاء اختبار", icon: Icon.Trophy },
     { href: "#/admin/live", key: "live", label: "الحصص المباشرة", icon: Icon.Video },
     { href: "#/admin/students", key: "students", label: "الطلاب", icon: Icon.Users },
@@ -135,7 +136,7 @@ function AdminDashboard() {
 function AdminPendingPage() {
   const [rows, setRows] = React.useState(null);
   const [error, setError] = React.useState(null);
-  const [lightbox, setLightbox] = React.useState(null); // {url, name}
+  const [lightbox, setLightbox] = React.useState(null);
   const [rejectFor, setRejectFor] = React.useState(null);
   const [rejectNote, setRejectNote] = React.useState("");
   const toast = useToast();
@@ -219,7 +220,6 @@ function AdminPendingPage() {
         </Card>
       )}
 
-      {/* Lightbox */}
       <Modal open={!!lightbox} onClose={() => setLightbox(null)} wide>
         {lightbox && (
           <div className="p-6">
@@ -229,7 +229,6 @@ function AdminPendingPage() {
         )}
       </Modal>
 
-      {/* Reject modal */}
       <Modal open={!!rejectFor} onClose={() => setRejectFor(null)}>
         <div className="p-6">
           <h3 className="font-display font-black text-lg text-azhar-800 mb-4">سبب الرفض</h3>
@@ -251,7 +250,7 @@ function AdminCoursesPage() {
   const [openCreate, setOpenCreate] = React.useState(false);
   const [expandedCourse, setExpandedCourse] = React.useState(null);
   const [expandedUnit, setExpandedUnit] = React.useState(null);
-  const [uploadModal, setUploadModal] = React.useState(null); // {lesson}
+  const [uploadModal, setUploadModal] = React.useState(null);
   const toast = useToast();
 
   const load = () => {
@@ -350,7 +349,6 @@ function AdminCoursesPage() {
         </Card>
       )}
 
-      {/* Create course modal */}
       <Modal open={openCreate} onClose={() => setOpenCreate(false)}>
         <div className="p-6">
           <h3 className="font-display font-black text-xl text-azhar-800 mb-4">كورس جديد</h3>
@@ -460,6 +458,157 @@ function UploadLessonForm({ lesson, onDone }) {
         </div>
         <input type="file" accept="application/pdf" onChange={e => setPdf(e.target.files?.[0])} className="mt-2 block w-full text-sm" />
         {pdf && <Button variant="dark" className="mt-3" onClick={uploadFile}>ارفع الملف</Button>}
+      </div>
+
+      <div className="mt-4 text-right">
+        <Button variant="outline" onClick={onDone}>إغلاق</Button>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Lectures management ----------
+function AdminLecturesPage() {
+  const [lectures, setLectures] = React.useState(null);
+  const [openCreate, setOpenCreate] = React.useState(false);
+  const [newLecture, setNewLecture] = React.useState({ title: "", grade: "الصف الأول الإعدادي", is_free: false });
+  const [uploadFor, setUploadFor] = React.useState(null);
+  const toast = useToast();
+
+  const load = () => {
+    adminApi.listLectures().then(r => setLectures(Array.isArray(r) ? r : (r?.lectures || []))).catch(() => setLectures([]));
+  };
+  React.useEffect(load, []);
+
+  const create = async () => {
+    try { await adminApi.createLecture(newLecture); toast.push("تم إنشاء المحاضرة", { type: "success" }); setOpenCreate(false); setNewLecture({ title: "", grade: "الصف الأول الإعدادي", is_free: false }); load(); }
+    catch (e) { toast.push(e.message, { type: "error" }); }
+  };
+  const publish = async (id) => { try { await adminApi.publishLecture(id); toast.push("تم النشر", { type: "success" }); load(); } catch (e) { toast.push(e.message, { type: "error" }); } };
+  const del = async (id) => { if (!confirm("حذف المحاضرة؟")) return; try { await adminApi.deleteLecture(id); toast.push("تم الحذف", { type: "success" }); load(); } catch (e) { toast.push(e.message, { type: "error" }); } };
+
+  return (
+    <AdminLayout page="lectures">
+      <FadeIn>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <h1 className="font-display font-black text-3xl text-azhar-800">المحاضرات</h1>
+            <p className="text-ink/60">محاضرات مستقلة بترفع على مدار السنة حسب الصف</p>
+          </div>
+          <Button variant="primary" onClick={() => setOpenCreate(true)}>+ محاضرة جديدة</Button>
+        </div>
+      </FadeIn>
+
+      {!lectures ? <Skeleton className="h-40 rounded-2xl" /> : lectures.length ? (
+        <div className="space-y-3">
+          {lectures.map(l => (
+            <Card key={l.id} className="p-4 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="font-display font-bold text-azhar-800">{l.title}</div>
+                  {l.is_free ? <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">مجانية</span> : null}
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${l.published ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700"}`}>{l.published ? "منشورة" : "مسودة"}</span>
+                </div>
+                <div className="text-xs text-ink/60 mt-1">{l.grade} · {l.video_key ? "فيه فيديو مرفوع" : l.youtube_url ? "رابط يوتيوب" : "بدون فيديو"}</div>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setUploadFor(l)}><Icon.Upload className="w-4 h-4" /></Button>
+                {!l.published && <Button size="sm" variant="dark" onClick={() => publish(l.id)}>نشر</Button>}
+                <Button size="sm" variant="danger" onClick={() => del(l.id)}><Icon.Trash className="w-4 h-4" /></Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card className="p-14 text-center">
+          <div className="font-display font-bold text-azhar-800 text-lg">لا يوجد محاضرات بعد</div>
+          <Button variant="primary" className="mt-4" onClick={() => setOpenCreate(true)}>ابدأ بإضافة محاضرة</Button>
+        </Card>
+      )}
+
+      <Modal open={openCreate} onClose={() => setOpenCreate(false)}>
+        <div className="p-6">
+          <h3 className="font-display font-black text-xl text-azhar-800 mb-4">محاضرة جديدة</h3>
+          <div className="space-y-3">
+            <Input label="عنوان المحاضرة" value={newLecture.title} onChange={e => setNewLecture({ ...newLecture, title: e.target.value })} />
+            <Select label="الصف" value={newLecture.grade} onChange={e => setNewLecture({ ...newLecture, grade: e.target.value })}
+              options={["الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي", "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"]} />
+            <label className="flex items-center gap-2 text-sm font-bold text-azhar-800">
+              <input type="checkbox" checked={newLecture.is_free} onChange={e => setNewLecture({ ...newLecture, is_free: e.target.checked })} />
+              محاضرة مجانية (تفتح لأي طالب حتى بدون اشتراك)
+            </label>
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setOpenCreate(false)}>إلغاء</Button>
+            <Button variant="primary" onClick={create} disabled={!newLecture.title}>إنشاء</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={!!uploadFor} onClose={() => setUploadFor(null)}>
+        {uploadFor && <UploadLectureForm lecture={uploadFor} onDone={() => { setUploadFor(null); load(); }} />}
+      </Modal>
+    </AdminLayout>
+  );
+}
+
+function UploadLectureForm({ lecture, onDone }) {
+  const [video, setVideo] = React.useState(null);
+  const [youtubeUrl, setYoutubeUrl] = React.useState("");
+  const [progress, setProgress] = React.useState(0);
+  const [busy, setBusy] = React.useState(false);
+  const toast = useToast();
+
+  const uploadVideo = async () => {
+    if (!video) return; setBusy(true); setProgress(0);
+    try {
+      const fd = new FormData(); fd.append("video", video);
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", API_BASE + `/api/admin/lectures/${lecture.id}/video`);
+        xhr.setRequestHeader("Authorization", `Bearer ${getToken()}`);
+        xhr.upload.onprogress = (e) => { if (e.lengthComputable) setProgress(Math.round(e.loaded / e.total * 100)); };
+        xhr.onload = () => xhr.status < 400 ? resolve() : reject(new Error(`خطأ ${xhr.status}`));
+        xhr.onerror = () => reject(new Error("فشل الرفع"));
+        xhr.send(fd);
+      });
+      toast.push("تم رفع الفيديو", { type: "success" });
+    } catch (e) { toast.push(e.message, { type: "error" }); }
+    finally { setBusy(false); }
+  };
+
+  const saveYoutube = async () => {
+    if (!youtubeUrl) return;
+    try { await adminApi.setLectureYoutube(lecture.id, youtubeUrl); toast.push("تم حفظ رابط اليوتيوب", { type: "success" }); }
+    catch (e) { toast.push(e.message, { type: "error" }); }
+  };
+
+  return (
+    <div className="p-6">
+      <h3 className="font-display font-black text-lg text-azhar-800 mb-1">فيديو المحاضرة</h3>
+      <div className="text-sm text-ink/60 mb-4">{lecture.title}</div>
+
+      <div className="bg-azhar-50/40 rounded-2xl p-4 mb-4">
+        <div className="font-display font-bold text-azhar-800 mb-2">رفع فيديو مباشر</div>
+        <label className="cursor-pointer block">
+          <div className={`border-2 border-dashed rounded-xl p-6 text-center ${video ? "border-emerald-400 bg-emerald-50" : "border-azhar-300 hover:border-azhar-500"}`}>
+            {video ? <div className="font-bold text-emerald-800">{video.name}</div> : <div className="font-bold text-azhar-800">اسحب أو اختر فيديو</div>}
+          </div>
+          <input type="file" accept="video/*" className="hidden" onChange={e => setVideo(e.target.files?.[0])} />
+        </label>
+        {busy && (
+          <div className="mt-3">
+            <div className="h-2 bg-azhar-100 rounded-full overflow-hidden"><div className="h-full bg-gold-500 transition-all" style={{ width: `${progress}%` }} /></div>
+            <div className="text-xs text-ink/60 mt-1 font-num">{progress}%</div>
+          </div>
+        )}
+        {video && <Button variant="primary" className="mt-3" onClick={uploadVideo} disabled={busy}>{busy ? "جاري الرفع..." : "ارفع الفيديو"}</Button>}
+      </div>
+
+      <div className="bg-azhar-50/40 rounded-2xl p-4">
+        <div className="font-display font-bold text-azhar-800 mb-2">أو رابط يوتيوب (بديل)</div>
+        <Input label="رابط اليوتيوب" value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." />
+        {youtubeUrl && <Button variant="dark" className="mt-3" onClick={saveYoutube}>احفظ الرابط</Button>}
       </div>
 
       <div className="mt-4 text-right">
@@ -798,4 +947,5 @@ function AdminSettingsPage() {
 Object.assign(window, {
   AdminLayout, AdminDashboard, AdminPendingPage, AdminCoursesPage, UploadLessonForm,
   AdminQuizPage, AdminLivePage, AdminStudentsPage, AdminFinancePage, AdminSettingsPage,
+  AdminLecturesPage, UploadLectureForm,
 });
