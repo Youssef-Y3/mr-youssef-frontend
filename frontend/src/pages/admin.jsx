@@ -595,6 +595,12 @@ function AdminLivePage() {
 // ---------- Students list ----------
 function AdminStudentsPage() {
   const [students, setStudents] = React.useState(null);
+  const toast = useToast();
+  const del = async (id, name) => {
+    if (!confirm(`متأكد عايز تمسح الطالب ${name}؟ هيتمسح كل بياناته (مدفوعات، تقدم، حجوزات).`)) return;
+    try { await adminApi.deleteStudent(id); toast.push("تم حذف الطالب", { type: "success" }); load(); }
+    catch (e) { toast.push(e.message, { type: "error" }); }
+  };
   const [q, setQ] = React.useState("");
   const [grade, setGrade] = React.useState("");
   React.useEffect(() => { adminApi.students().then(r => setStudents(Array.isArray(r) ? r : (r?.students || []))).catch(() => setStudents([])); }, []);
@@ -624,6 +630,7 @@ function AdminStudentsPage() {
             <table className="w-full text-right text-sm">
               <thead className="bg-azhar-50 text-xs font-bold text-azhar-800"><tr>
                 <th className="px-4 py-3">الاسم</th><th className="px-4 py-3">المستخدم</th><th className="px-4 py-3">الصف</th><th className="px-4 py-3">إيميل ولي الأمر</th><th className="px-4 py-3">حالة الاشتراك</th><th className="px-4 py-3">تاريخ التسجيل</th>
+                <th className="px-4 py-3">حذف</th>
               </tr></thead>
               <tbody className="divide-y divide-black/5">
                 {filtered.map((s, i) => (
@@ -634,6 +641,9 @@ function AdminStudentsPage() {
                     <td className="px-4 py-3 text-xs" dir="ltr">{s.parent_email}</td>
                     <td className="px-4 py-3"><StatusBadge status={s.subscription_status || (s.active ? "active" : "pending")} /></td>
                     <td className="px-4 py-3 text-xs">{fmt.date(s.created_at)}</td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => del(s.id, s.name)} className="text-red-600 hover:bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center"><Icon.Trash className="w-4 h-4" /></button>
+                    </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && <tr><td colSpan={6} className="text-center py-10 text-ink/60">لا يوجد نتائج</td></tr>}
