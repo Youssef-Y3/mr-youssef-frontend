@@ -133,6 +133,7 @@ const adminApi = {
   createLive: (b) => apiFetch("/api/admin/live", { method: "POST", body: b }),
   // students / payments
   students: () => apiFetch("/api/admin/students"),
+  deleteStudent: (id) => apiFetch(`/api/admin/students/${id}`, { method: "DELETE" }),
   pendingPayments: () => apiFetch("/api/admin/payments/pending"),
   allPayments: () => apiFetch("/api/admin/payments"),
   receiptUrl: (id) => `${API_BASE}/api/admin/payments/${id}/receipt`, // needs auth header — used via <img> with auth-blob loader
