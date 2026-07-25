@@ -318,16 +318,28 @@ function UnitAccordion({ unit, index }) {
       {open && (
         <div className="border-t border-black/5 divide-y divide-black/5">
           {lessons.map((l, li) => (
-            <a key={l.id||li} href={`#/lesson/${l.id}`} className="flex items-center justify-between p-4 hover:bg-azhar-50/30 transition">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gold-100 text-gold-700 flex items-center justify-center"><Icon.Play className="w-4 h-4"/></div>
-                <div>
-                  <div className="font-display font-bold text-azhar-800">{l.title || `درس ${li+1}`}</div>
-                  <div className="text-xs text-ink/60">{l.duration_minutes ? `${l.duration_minutes} دقيقة` : ""}</div>
+            l.locked ? (
+              <div key={l.id||li} className="flex items-center justify-between p-4 opacity-60 cursor-not-allowed">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center">🔒</div>
+                  <div>
+                    <div className="font-display font-bold text-ink/60">{l.title || `درس ${li+1}`}</div>
+                    <div className="text-xs text-ink/40">اشترك عشان تفتح الدرس ده</div>
+                  </div>
                 </div>
               </div>
-              <Icon.ArrowLeft className="w-4 h-4 text-azhar-800"/>
-            </a>
+            ) : (
+              <a key={l.id||li} href={`#/lesson/${l.id}`} className="flex items-center justify-between p-4 hover:bg-azhar-50/30 transition">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gold-100 text-gold-700 flex items-center justify-center"><Icon.Play className="w-4 h-4"/></div>
+                  <div>
+                    <div className="font-display font-bold text-azhar-800">{l.title || `درس ${li+1}`}</div>
+                    <div className="text-xs text-ink/60">{l.duration_minutes ? `${l.duration_minutes} دقيقة` : ""}</div>
+                  </div>
+                </div>
+                <Icon.ArrowLeft className="w-4 h-4 text-azhar-800"/>
+              </a>
+            )
           ))}
           {!lessons.length && <div className="p-4 text-center text-ink/50 text-sm">لا توجد دروس بعد</div>}
         </div>
