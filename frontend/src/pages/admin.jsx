@@ -595,15 +595,20 @@ function AdminLivePage() {
 // ---------- Students list ----------
 function AdminStudentsPage() {
   const [students, setStudents] = React.useState(null);
+  const [q, setQ] = React.useState("");
+  const [grade, setGrade] = React.useState("");
   const toast = useToast();
+
+  const load = () => {
+    adminApi.students().then(r => setStudents(Array.isArray(r) ? r : (r?.students || []))).catch(() => setStudents([]));
+  };
+  React.useEffect(load, []);
+
   const del = async (id, name) => {
     if (!confirm(`متأكد عايز تمسح الطالب ${name}؟ هيتمسح كل بياناته (مدفوعات، تقدم، حجوزات).`)) return;
     try { await adminApi.deleteStudent(id); toast.push("تم حذف الطالب", { type: "success" }); load(); }
     catch (e) { toast.push(e.message, { type: "error" }); }
   };
-  const [q, setQ] = React.useState("");
-  const [grade, setGrade] = React.useState("");
-  React.useEffect(() => { adminApi.students().then(r => setStudents(Array.isArray(r) ? r : (r?.students || []))).catch(() => setStudents([])); }, []);
 
   const filtered = (students || []).filter(s => {
     if (grade && s.grade !== grade) return false;
@@ -646,7 +651,7 @@ function AdminStudentsPage() {
                     </td>
                   </tr>
                 ))}
-                {filtered.length === 0 && <tr><td colSpan={6} className="text-center py-10 text-ink/60">لا يوجد نتائج</td></tr>}
+                {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-10 text-ink/60">لا يوجد نتائج</td></tr>}
               </tbody>
             </table>
           </div>
