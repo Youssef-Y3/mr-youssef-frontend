@@ -458,22 +458,35 @@ function LectureDetailPage() {
   const id = route.parts[1];
   const [data, setData] = React.useState(null);
   const [error, setError] = React.useState(null);
-  const [videoBlob, setVideoBlob] = React.useState(null);
+  const [videoSrc, setVideoSrc] = React.useState(null);
+  const [videoError, setVideoError] = React.useState(null);
+  const [progress, setProgress] = React.useState(0);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   React.useEffect(() => {
-    studentApi.lecture(id).then(async (d) => {
-      setData(d);
-      if (d?.video_url) {
-        try {
-          const res = await fetch(API_BASE + d.video_url, { headers: { Authorization: `Bearer ${getToken()}` } });
-          if (res.ok) {
-            const blob = await res.blob();
-            setVideoBlob(URL.createObjectURL(blob));
-          }
-        } catch {}
-      }
-    }).catch(e => setError(e.message));
+    studentApi.lecture(id).then(setData).catch(e => setError(e.message));
   }, [id]);
+
+  React.useEffect(() => {
+    if (!data?.video_url) return;
+    let blobUrl;
+    let cancelled = false;
+    setVideoSrc(null);
+    setVideoError(null);
+    setProgress(0);
+    (async () => {
+      try {
+        blobUrl = await fetchProtectedBlob(`${API_BASE}${data.video_url}`, {
+          onProgress: (pct) => { if (!cancelled) setProgress(pct); },
+        });
+        if (cancelled) { URL.revokeObjectURL(blobUrl); return; }
+        setVideoSrc(blobUrl);
+      } catch (e) {
+        if (!cancelled) setVideoError(e.message);
+      }
+    })();
+    return () => { cancelled = true; if (blobUrl) URL.revokeObjectURL(blobUrl); };
+  }, [data?.video_url, retryCount]);
 
   return (
     <StudentLayout page="lectures">
@@ -490,12 +503,28 @@ function LectureDetailPage() {
       ) : (
         <div>
           <h1 className="font-display font-black text-2xl text-azhar-800 mb-4">{data.lecture?.title}</h1>
-          <div className="bg-black rounded-3xl overflow-hidden shadow-lift">
+          <div className="relative bg-black rounded-3xl overflow-hidden shadow-lift aspect-video">
             {data.video_url ? (
-              videoBlob ? (
-                <video src={videoBlob} controls controlsList="nodownload" className="w-full aspect-video" />
+              videoError ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-3 p-6 text-center">
+                  <Icon.X className="w-10 h-10 text-red-400" />
+                  <div className="font-bold">{videoError}</div>
+                  <button onClick={() => setRetryCount(c => c + 1)} className="bg-gold-500 text-azhar-900 font-bold px-5 py-2.5 rounded-xl hover:bg-gold-400 transition">
+                    إعادة المحاولة
+                  </button>
+                </div>
+              ) : !videoSrc ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-3 px-10">
+                  <div className="w-10 h-10 border-4 border-white/20 border-t-gold-400 rounded-full animate-spin" />
+                  <div className="text-sm text-white/70">جارٍ تحميل الفيديو{progress > 0 ? ` — ${progress}%` : "..."}</div>
+                  {progress > 0 && (
+                    <div className="w-full max-w-xs h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-gold-400 transition-all" style={{ width: `${progress}%` }} />
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div className="aspect-video flex items-center justify-center text-white/60">جاري تحميل الفيديو...</div>
+                <video src={videoSrc} controls controlsList="nodownload" className="w-full h-full" onError={() => setVideoError("تعذر تشغيل هذا الفيديو")} />
               )
             ) : data.youtube_url ? (
               <iframe src={data.youtube_url.replace("watch?v=", "embed/")} className="w-full aspect-video" allowFullScreen />
