@@ -34,7 +34,6 @@ async function apiFetch(path, opts = {}) {
   if (raw) return res;
 
   if (res.status === 401) {
-    // Not authenticated
     setToken(null); setRole(null); setStudent(null);
     if (!location.hash.startsWith("#/login") && !location.hash.startsWith("#/")) {
       location.hash = "#/login";
@@ -42,7 +41,6 @@ async function apiFetch(path, opts = {}) {
     throw new ApiError("انتهت جلستك، الرجاء تسجيل الدخول", 401);
   }
   if (res.status === 402) {
-    // Payment required
     window.dispatchEvent(new CustomEvent("subscription-required"));
     throw new ApiError("اشتراكك منتهي، برجاء الاشتراك للمتابعة", 402);
   }
@@ -75,12 +73,6 @@ const authApi = {
 };
 
 // ---------- Student ----------
-// NOTE: videoUrl / fileUrl no longer carry ?token=... — the backend only
-// accepts the token via the Authorization header, and a plain <video src>
-// or <a href> can't send that header. lesson.jsx now fetches these with
-// fetch()+Authorization and plays/opens them as a blob URL instead of
-// using these raw URLs directly. They're kept here (token-less) only in
-// case something needs the bare endpoint path.
 const studentApi = {
   courses: () => apiFetch("/api/courses"),
   course: (id) => apiFetch(`/api/courses/${id}`),
@@ -89,6 +81,9 @@ const studentApi = {
   fileUrl: (id) => `${API_BASE}/api/stream/file/${id}`,
   saveProgress: (id, position_seconds, completed = false) =>
     apiFetch(`/api/lessons/${id}/progress`, { method: "POST", body: { position_seconds, completed } }),
+  // lectures
+  lectures: () => apiFetch("/api/lectures"),
+  lecture: (id) => apiFetch(`/api/lectures/${id}`),
 };
 
 // ---------- Quizzes ----------
@@ -136,13 +131,19 @@ const adminApi = {
   deleteStudent: (id) => apiFetch(`/api/admin/students/${id}`, { method: "DELETE" }),
   pendingPayments: () => apiFetch("/api/admin/payments/pending"),
   allPayments: () => apiFetch("/api/admin/payments"),
-  receiptUrl: (id) => `${API_BASE}/api/admin/payments/${id}/receipt`, // needs auth header — used via <img> with auth-blob loader
+  receiptUrl: (id) => `${API_BASE}/api/admin/payments/${id}/receipt`,
   confirmPayment: (id) => apiFetch(`/api/admin/payments/${id}/confirm`, { method: "POST" }),
   rejectPayment: (id, note) => apiFetch(`/api/admin/payments/${id}/reject`, { method: "POST", body: { note } }),
   // settings / report
   settings: () => apiFetch("/api/admin/settings"),
   updateSettings: (b) => apiFetch("/api/admin/settings", { method: "PUT", body: b }),
   financial: () => apiFetch("/api/admin/report/financial"),
+  // lectures
+  listLectures: () => apiFetch("/api/admin/lectures"),
+  createLecture: (b) => apiFetch("/api/admin/lectures", { method: "POST", body: b }),
+  publishLecture: (id) => apiFetch(`/api/admin/lectures/${id}/publish`, { method: "POST" }),
+  deleteLecture: (id) => apiFetch(`/api/admin/lectures/${id}`, { method: "DELETE" }),
+  setLectureYoutube: (id, youtube_url) => apiFetch(`/api/admin/lectures/${id}/youtube`, { method: "POST", body: { youtube_url } }),
 };
 
 // Helper: load an authenticated image into a blob URL (for receipts, etc.)
